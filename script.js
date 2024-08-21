@@ -1,15 +1,4 @@
 "use strict";
-// Canvas initialization and resize control.
-const elCanvas = document.getElementById("canvas");
-const ctx = elCanvas.getContext("2d");
-function sizeCanvas() {
-    const width = innerWidth;
-    const height = innerHeight;
-    elCanvas.width = width;
-    elCanvas.height = height;
-}
-sizeCanvas();
-addEventListener("resize", sizeCanvas);
 // Location services.
 class Coords {
     constructor(lat, lng) {
@@ -57,6 +46,9 @@ if (!("geolocation" in navigator)) {
 const elRefreshesDebug = document.getElementById("refreshes-debug");
 const elCoordsDebug = document.getElementById("coords-debug");
 const elOffsetDebug = document.getElementById("offset-debug");
+const elAngleDebug = document.getElementById("angle-debug");
+const elFrameTime = document.getElementById("elFrameTime");
+const elInBetweenTime = document.getElementById("inBetweenTime");
 let refreshes = 0;
 navigator.geolocation.watchPosition(position => {
     refreshes++;
@@ -84,12 +76,8 @@ function activateOrientation() {
                 }
             }
             if (ev.beta) {
-                beta = ev.beta;
-                while (beta < 0) {
-                    beta += 360;
-                }
-                beta -= 90;
-                beta = Math.min(-90, Math.max(beta, 0));
+                elAngleDebug.innerText = `${ev.beta}`;
+                beta = Math.min(90, Math.max(0, ev.beta * 1.5)) - 90;
             }
         });
     }
@@ -108,15 +96,22 @@ let xDegreesPerMeter = 0;
 let yDegreesPerMeter = 0;
 const metersPerGridline = 10;
 const gridlineLength = 1;
-const mapWidth = 165;
+const mapWidth = 175;
 const pxPerMeter = gridlineLength / metersPerGridline;
+let inBetweenTime = 0;
+let xMetersPerDegree = 0;
+let yMetersPerDegree = 0;
 function draw() {
+    elInBetweenTime.innerText = `In between:${Date.now() - inBetweenTime}ms`;
+    if (xMetersPerDegree == 0) {
+        xMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat, renderCoords.lng + 1));
+        xDegreesPerMeter = 1 / xMetersPerDegree;
+        yMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat + 1, renderCoords.lng));
+        yDegreesPerMeter = 1 / yMetersPerDegree;
+    }
+    const drawStart = Date.now();
     const dt = (Date.now() - loopInstance) / 1000;
     loopInstance = Date.now();
-    const xMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat, renderCoords.lng + 1));
-    xDegreesPerMeter = 1 / xMetersPerDegree;
-    const yMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat + 1, renderCoords.lng));
-    yDegreesPerMeter = 1 / yMetersPerDegree;
     if (renderCoords.lat - myCoords.lat > xDegreesPerMeter * gridlineLength * 10
         || renderCoords.lng - myCoords.lng > yDegreesPerMeter * gridlineLength * 10) {
         renderCoords = myCoords;
@@ -125,43 +120,66 @@ function draw() {
         renderCoords.lat = renderCoords.lat + (myCoords.lat - renderCoords.lat) * dt;
         renderCoords.lng = renderCoords.lng + (myCoords.lng - renderCoords.lng) * dt;
     }
-    ctx.clearRect(0, 0, elCanvas.width, elCanvas.height);
+    ctx.clearRect(0, 0, width, height);
     grid();
-    setTimeout(draw, 1000 / 30);
+    elFrameTime.innerText = `Frame time: ${Date.now() - drawStart}ms`;
+    inBetweenTime = Date.now();
+    setTimeout(draw, 1000 / 20);
 }
 let testStart = Date.now();
+let width;
+let height;
+let xFov;
+let yFov;
+let xFovLength;
+let yFovLength;
 const nearPlane = pxPerMeter;
-const xFov = Math.PI / 4;
-const yFov = xFov * elCanvas.height / elCanvas.width;
-const xFovLength = 2 * nearPlane * Math.tan(xFov / 2);
-const yFovLength = 2 * nearPlane * Math.tan(yFov / 2);
-let showPerspective = false;
+// Canvas initialization and resize control.
+const elCanvas = document.getElementById("canvas");
+const ctx = elCanvas.getContext("2d");
+function sizeCanvas() {
+    width = innerWidth;
+    height = innerHeight;
+    elCanvas.width = width;
+    elCanvas.height = height;
+    xFov = Math.PI / 4;
+    yFov = xFov * height / width;
+    xFovLength = 2 * nearPlane * Math.tan(xFov / 2);
+    yFovLength = 2 * nearPlane * Math.tan(yFov / 2);
+}
+sizeCanvas();
+addEventListener("resize", sizeCanvas);
+// Grid drawing.
 function grid() {
     // Useful values.
     const lngOffset = (renderCoords.lat % xDegreesPerMeter) / xDegreesPerMeter * pxPerMeter;
     const latOffset = (renderCoords.lat % yDegreesPerMeter) / xDegreesPerMeter * pxPerMeter;
     const alphaRad = alpha * Math.PI / 180;
     const betaRad = beta * Math.PI / 180;
-    const gridlineCount = 40;
+    const cosAlpha = Math.cos(alphaRad);
+    const sinAlpha = Math.sin(alphaRad);
+    const cosBeta = Math.cos(betaRad);
+    const sinBeta = Math.sin(betaRad);
+    const gridlineCount = 5;
     const extreme = gridlineCount * gridlineLength;
     const z = 5 * pxPerMeter;
-    const backup = (20 - 80 * Math.sin(betaRad) ** 1) * pxPerMeter;
+    const backup = (20 - 80 * sinBeta ** 1) * pxPerMeter;
     // Drawing functions.
     function inFov([gridX, gridY]) {
         let x = gridX;
         let y = gridY;
         // Offset based on player position.
-        x += lngOffset;
-        y += latOffset;
+        // x += lngOffset;
+        // y += latOffset;
         // Rotate.
         [x, y] = [
-            x * Math.cos(alphaRad) - y * Math.sin(alphaRad),
-            y = x * Math.sin(alphaRad) + y * Math.cos(alphaRad),
+            x * cosAlpha - y * sinAlpha,
+            y = x * sinAlpha + y * cosAlpha,
         ];
         // Determine location relative to center of frame of view.
         let fovX = x; // Horizontal distance from the center of the frame of view.
-        let fovY = y * Math.cos(betaRad) - z * Math.sin(betaRad); // Outward distance from viewer.
-        let fovZ = -z * Math.cos(betaRad) - y * Math.sin(betaRad); // Height above viewer.
+        let fovY = y * cosBeta - z * sinBeta; // Outward distance from viewer.
+        let fovZ = -z * cosBeta - y * sinBeta; // Height above viewer.
         fovY += backup;
         return [fovX, fovY, fovZ];
     }
@@ -173,14 +191,14 @@ function grid() {
         ];
         // Expand to canvas.
         let [x, y] = [
-            fovX / xFovLength * elCanvas.width,
-            fovZ / yFovLength * elCanvas.height,
+            fovX / xFovLength * width,
+            fovZ / yFovLength * height,
         ];
         // Flip Y.
         y = -y;
         // Map coordinates to canvas.
-        x += elCanvas.width / 2;
-        y += elCanvas.height / 2;
+        x += width / 2;
+        y += height / 2;
         return [x, y];
     }
     function line(startGridX, startGridY, endGridX, endGridY, color) {
@@ -221,11 +239,11 @@ function grid() {
     }
     ctx.strokeStyle = "white";
     ctx.beginPath();
-    ctx.arc(elCanvas.width / 2, elCanvas.height / 2, mapWidth, 0, 2 * Math.PI);
+    ctx.arc(width / 2, height / 2, mapWidth, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.clip();
     // Grid lines.
-    const shadeFactor = 50 - 77 * Math.sin(betaRad);
+    const shadeFactor = 50 - 77 * sinBeta;
     for (let y = -gridlineCount; y <= gridlineCount; y++) {
         const shade = Math.min(255, (gridlineCount - Math.abs(y)) / gridlineCount * shadeFactor);
         const color = `rgb(${shade}, ${shade}, ${shade})`;
@@ -255,20 +273,3 @@ function grid() {
     }
 }
 draw();
-document.addEventListener("keydown", ev => {
-    if (ev.key == "ArrowDown") {
-        beta -= 2;
-    }
-    else if (ev.key == "ArrowUp") {
-        beta += 2;
-    }
-    else if (ev.key == "ArrowLeft") {
-        alpha -= 2;
-    }
-    else if (ev.key == "ArrowRight") {
-        alpha += 2;
-    }
-    else if (ev.key == " ") {
-        showPerspective = !showPerspective;
-    }
-});

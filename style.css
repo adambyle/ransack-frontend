@@ -5,7 +5,6 @@
     padding: 0;
     box-sizing: border-box;
     font-family: "Inter";
-    color: white;
 }
 
 body {
@@ -23,6 +22,7 @@ canvas {
 h1 {
     font-size: 40px;
     font-weight: bold;
+    color: white;
 }
 
 main {
