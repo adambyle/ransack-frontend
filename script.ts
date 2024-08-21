@@ -135,7 +135,7 @@ let yDegreesPerMeter = 0;
 
 const metersPerGridline = 10;
 const gridlineLength = 1;
-const mapWidth = 300;
+const mapWidth = 165;
 const pxPerMeter = gridlineLength / metersPerGridline;
 
 function draw() {
@@ -187,8 +187,8 @@ function grid() {
 
     const extreme = gridlineCount * gridlineLength;
 
-    const z = (5 - 45 * Math.sin(betaRad) ** 1) * pxPerMeter;
-    const backup = 20 * pxPerMeter;
+    const z = 5 * pxPerMeter;
+    const backup = (20 - 80 * Math.sin(betaRad) ** 1) * pxPerMeter;
 
     // Drawing functions.
 
@@ -293,6 +293,13 @@ function grid() {
         ctx.lineTo(endX, endY);
         ctx.stroke();
     }
+
+    ctx.strokeStyle = "white";
+
+    ctx.beginPath();
+    ctx.arc(elCanvas.width / 2, elCanvas.height / 2, mapWidth, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.clip();
 
     // Grid lines.
 
