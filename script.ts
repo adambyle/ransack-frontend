@@ -111,7 +111,7 @@ function activateOrientation() {
                     beta += 360;
                 }
                 beta -= 90;
-                beta = Math.min(-90, Math.max(beta, 30));
+                beta = Math.min(-90, Math.max(beta, 0));
             }
         });
     }
@@ -296,8 +296,10 @@ function grid() {
 
     // Grid lines.
 
+    const shadeFactor = 50 - 77 * Math.sin(betaRad);
+
     for (let y = -gridlineCount; y <= gridlineCount; y++) {
-        const shade = Math.min(255, (gridlineCount - Math.abs(y)) / gridlineCount * 255);
+        const shade = Math.min(255, (gridlineCount - Math.abs(y)) / gridlineCount * shadeFactor);
         const color = `rgb(${shade}, ${shade}, ${shade})`;
 
         const startGridX = -extreme;
@@ -309,7 +311,7 @@ function grid() {
     }
 
     for (let x = -gridlineCount; x <= gridlineCount; x++) {
-        const shade = Math.min(255, (gridlineCount - Math.abs(x)) / gridlineCount * 255);
+        const shade = Math.min(255, (gridlineCount - Math.abs(x)) / gridlineCount * shadeFactor);
         const color = `rgb(${shade}, ${shade}, ${shade})`;
 
         const startGridX = x * gridlineLength;
@@ -322,15 +324,15 @@ function grid() {
 
     // Player dot.
 
-    ctx.fillStyle = "red";
+    ctx.strokeStyle = "red";
     ctx.beginPath();
 
     const playerFovLoc = inFov([0, 0]);
     if (playerFovLoc[1] > 0) {
         const [x, y] = point(playerFovLoc);
 
-        ctx.arc(x, y, 8, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.arc(x, y, 6, 0, 2 * Math.PI);
+        ctx.stroke();
     }
 }
 
