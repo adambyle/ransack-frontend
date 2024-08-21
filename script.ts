@@ -79,18 +79,18 @@ const elOffsetDebug = <HTMLParagraphElement>document.getElementById("offset-debu
 
 let refreshes = 0;
 
-// navigator.geolocation.watchPosition(position => {
-//     refreshes++;
-//     const newCoords = new Coords(position.coords.latitude, position.coords.longitude);
-//     elOffsetDebug.innerText = `Offset: ${newCoords.distanceTo(myCoords)}`
-//     myCoords = newCoords;
-//     elCoordsDebug.innerText = `${myCoords.lat} ${myCoords.lng}`;
-//     elRefreshesDebug.innerText = `Refreshes: ${refreshes}`;
-//     if (position.coords.speed) {
-//         mySpeed = position.coords.speed;
-//     }
-//     myAccuracy = position.coords.accuracy;
-// }, geolocationError, { enableHighAccuracy: true, maximumAge: 1000 });
+navigator.geolocation.watchPosition(position => {
+    refreshes++;
+    const newCoords = new Coords(position.coords.latitude, position.coords.longitude);
+    elOffsetDebug.innerText = `Offset: ${newCoords.distanceTo(myCoords)}`
+    myCoords = newCoords;
+    elCoordsDebug.innerText = `${myCoords.lat} ${myCoords.lng}`;
+    elRefreshesDebug.innerText = `Refreshes: ${refreshes}`;
+    if (position.coords.speed) {
+        mySpeed = position.coords.speed;
+    }
+    myAccuracy = position.coords.accuracy;
+}, geolocationError, { enableHighAccuracy: true, maximumAge: 1000 });
 
 let alpha: number = 0; // Tip north, + west
 let beta: number = 0; // Screen up, + tipped toward
@@ -116,12 +116,12 @@ function activateOrientation() {
         });
     }
 
-    // if ("requestPermission" in DeviceOrientationEvent) {
-    //     (<any>DeviceOrientationEvent).requestPermission()
-    //         .then(listenOrientation);
-    // } else {
-    //     listenOrientation();
-    // }
+    if ("requestPermission" in DeviceOrientationEvent) {
+        (<any>DeviceOrientationEvent).requestPermission()
+            .then(listenOrientation);
+    } else {
+        listenOrientation();
+    }
 }
 
 Object.assign(window, { activateOrientation });
