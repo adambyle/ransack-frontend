@@ -38,7 +38,7 @@ let renderCoords = new Coords(0, 0);
 let mySpeed = 0;
 let myAccuracy = 0;
 function geolocationError() {
-    alert("Please enable geolocation services and reload the page!");
+    alert("Please enable location tracking and reload the page!");
 }
 if (!("geolocation" in navigator)) {
     geolocationError();
@@ -59,6 +59,7 @@ navigator.geolocation.watchPosition(position => {
 }, geolocationError, { enableHighAccuracy: true, maximumAge: 1000 });
 let alpha = 0; // Tip north, + west
 let beta = 0; // Screen up, + tipped toward
+const elAngleDebug = document.getElementById("angle-debug");
 function activateOrientation() {
     function listenOrientation() {
         addEventListener("deviceorientation", ev => {
@@ -71,7 +72,8 @@ function activateOrientation() {
                 }
             }
             if (ev.beta) {
-                beta = Math.min(90, Math.max(0, ev.beta * 1)) - 90;
+                beta = Math.min(80, Math.max(0, ev.beta)) - 90;
+                elAngleDebug.innerText = `${Math.floor(alpha)} ${Math.floor(beta)} ${ev.beta}`;
             }
         });
     }
@@ -92,18 +94,15 @@ const metersPerGridline = 10;
 const gridlineLength = 1;
 const mapWidth = 200;
 const pxPerMeter = gridlineLength / metersPerGridline;
-let inBetweenTime = 0;
 let xMetersPerDegree = 0;
 let yMetersPerDegree = 0;
 function draw() {
-    const rect = elCanvas.getBoundingClientRect();
     if (xMetersPerDegree == 0) {
         xMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat, renderCoords.lng + 1));
         xDegreesPerMeter = 1 / xMetersPerDegree;
         yMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat + 1, renderCoords.lng));
         yDegreesPerMeter = 1 / yMetersPerDegree;
     }
-    const drawStart = Date.now();
     const dt = (Date.now() - loopInstance) / 1000;
     loopInstance = Date.now();
     if (renderCoords.lat - myCoords.lat > 10 * xDegreesPerMeter
@@ -116,7 +115,6 @@ function draw() {
     }
     ctx.clearRect(0, 0, width, height);
     grid();
-    inBetweenTime = Date.now();
     requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
@@ -146,8 +144,10 @@ addEventListener("resize", sizeCanvas);
 // Grid drawing.
 function grid() {
     // Useful values.
-    const lngOffset = (renderCoords.lat % xDegreesPerMeter) / xDegreesPerMeter * pxPerMeter;
-    const latOffset = (renderCoords.lat % yDegreesPerMeter) / yDegreesPerMeter * pxPerMeter;
+    const lngOffset = (renderCoords.lng % (xDegreesPerMeter * metersPerGridline))
+        / xDegreesPerMeter * pxPerMeter;
+    const latOffset = (renderCoords.lat % (yDegreesPerMeter * metersPerGridline))
+        / yDegreesPerMeter * pxPerMeter;
     console.log((renderCoords.lat % xDegreesPerMeter) / xDegreesPerMeter);
     const alphaRad = alpha * Math.PI / 180;
     const betaRad = beta * Math.PI / 180;
@@ -157,8 +157,8 @@ function grid() {
     const sinBeta = Math.sin(betaRad);
     const gridlineCount = 20;
     const extreme = gridlineCount * gridlineLength;
-    const z = 5 * pxPerMeter;
-    const backup = (20 - 80 * sinBeta ** 1) * pxPerMeter;
+    const z = 2 * pxPerMeter;
+    const backup = (5 - 95 * sinBeta) * pxPerMeter;
     // Drawing functions.
     function inFov([gridX, gridY]) {
         let x = gridX;
