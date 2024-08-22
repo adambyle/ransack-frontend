@@ -58,15 +58,13 @@ if (!("geolocation" in navigator)) {
 
 const elRefreshesDebug = <HTMLParagraphElement>document.getElementById("refreshes-debug");
 const elCoordsDebug = <HTMLParagraphElement>document.getElementById("coords-debug");
-const elOffsetDebug = <HTMLParagraphElement>document.getElementById("offset-debug");
-const elAngleDebug = <HTMLParagraphElement>document.getElementById("angle-debug");
+const elAnythingDebug = <HTMLParagraphElement>document.getElementById("anything-debug");
 
 let refreshes = 0;
 
 navigator.geolocation.watchPosition(position => {
     refreshes++;
     const newCoords = new Coords(position.coords.latitude, position.coords.longitude);
-    elOffsetDebug.innerText = `Offset: ${newCoords.distanceTo(myCoords)}`
     myCoords = newCoords;
     elCoordsDebug.innerText = `${myCoords.lat} ${myCoords.lng}`;
     elRefreshesDebug.innerText = `Refreshes: ${refreshes}`;
@@ -90,7 +88,6 @@ function activateOrientation() {
                 }
             }
             if (ev.beta) {
-                elAngleDebug.innerText = `${ev.beta}`;
                 beta = Math.min(90, Math.max(0, ev.beta * 1)) - 90;
             }
         });
@@ -124,6 +121,9 @@ let xMetersPerDegree = 0;
 let yMetersPerDegree = 0;
 
 function draw() {
+    const rect = elCanvas.getBoundingClientRect();
+    elAnythingDebug.innerText = `Anything: ${rect.top} ${rect.left} ${rect.width} ${rect.height}`;
+
     if (xMetersPerDegree == 0) {
         xMetersPerDegree = renderCoords.distanceTo(
             new Coords(renderCoords.lat, renderCoords.lng + 1));
