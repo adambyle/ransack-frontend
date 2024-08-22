@@ -47,8 +47,6 @@ const elRefreshesDebug = document.getElementById("refreshes-debug");
 const elCoordsDebug = document.getElementById("coords-debug");
 const elOffsetDebug = document.getElementById("offset-debug");
 const elAngleDebug = document.getElementById("angle-debug");
-const elFrameTime = document.getElementById("elFrameTime");
-const elInBetweenTime = document.getElementById("inBetweenTime");
 let refreshes = 0;
 navigator.geolocation.watchPosition(position => {
     refreshes++;
@@ -77,7 +75,7 @@ function activateOrientation() {
             }
             if (ev.beta) {
                 elAngleDebug.innerText = `${ev.beta}`;
-                beta = Math.min(90, Math.max(0, ev.beta * 1.5)) - 90;
+                beta = Math.min(90, Math.max(0, ev.beta * 1)) - 90;
             }
         });
     }
@@ -96,13 +94,12 @@ let xDegreesPerMeter = 0;
 let yDegreesPerMeter = 0;
 const metersPerGridline = 10;
 const gridlineLength = 1;
-const mapWidth = 175;
+const mapWidth = 200;
 const pxPerMeter = gridlineLength / metersPerGridline;
 let inBetweenTime = 0;
 let xMetersPerDegree = 0;
 let yMetersPerDegree = 0;
 function draw() {
-    elInBetweenTime.innerText = `In between:${Date.now() - inBetweenTime}ms`;
     if (xMetersPerDegree == 0) {
         xMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat, renderCoords.lng + 1));
         xDegreesPerMeter = 1 / xMetersPerDegree;
@@ -112,8 +109,8 @@ function draw() {
     const drawStart = Date.now();
     const dt = (Date.now() - loopInstance) / 1000;
     loopInstance = Date.now();
-    if (renderCoords.lat - myCoords.lat > xDegreesPerMeter * gridlineLength * 10
-        || renderCoords.lng - myCoords.lng > yDegreesPerMeter * gridlineLength * 10) {
+    if (renderCoords.lat - myCoords.lat > 10 * xDegreesPerMeter
+        || renderCoords.lng - myCoords.lng > 10 * yDegreesPerMeter) {
         renderCoords = myCoords;
     }
     else {
@@ -122,10 +119,10 @@ function draw() {
     }
     ctx.clearRect(0, 0, width, height);
     grid();
-    elFrameTime.innerText = `Frame time: ${Date.now() - drawStart}ms`;
     inBetweenTime = Date.now();
-    setTimeout(draw, 1000 / 20);
+    requestAnimationFrame(draw);
 }
+requestAnimationFrame(draw);
 let testStart = Date.now();
 let width;
 let height;
@@ -153,14 +150,15 @@ addEventListener("resize", sizeCanvas);
 function grid() {
     // Useful values.
     const lngOffset = (renderCoords.lat % xDegreesPerMeter) / xDegreesPerMeter * pxPerMeter;
-    const latOffset = (renderCoords.lat % yDegreesPerMeter) / xDegreesPerMeter * pxPerMeter;
+    const latOffset = (renderCoords.lat % yDegreesPerMeter) / yDegreesPerMeter * pxPerMeter;
+    console.log((renderCoords.lat % xDegreesPerMeter) / xDegreesPerMeter);
     const alphaRad = alpha * Math.PI / 180;
     const betaRad = beta * Math.PI / 180;
     const cosAlpha = Math.cos(alphaRad);
     const sinAlpha = Math.sin(alphaRad);
     const cosBeta = Math.cos(betaRad);
     const sinBeta = Math.sin(betaRad);
-    const gridlineCount = 5;
+    const gridlineCount = 20;
     const extreme = gridlineCount * gridlineLength;
     const z = 5 * pxPerMeter;
     const backup = (20 - 80 * sinBeta ** 1) * pxPerMeter;
@@ -168,9 +166,6 @@ function grid() {
     function inFov([gridX, gridY]) {
         let x = gridX;
         let y = gridY;
-        // Offset based on player position.
-        // x += lngOffset;
-        // y += latOffset;
         // Rotate.
         [x, y] = [
             x * cosAlpha - y * sinAlpha,
@@ -237,28 +232,28 @@ function grid() {
         ctx.lineTo(endX, endY);
         ctx.stroke();
     }
-    ctx.strokeStyle = "white";
-    ctx.beginPath();
-    ctx.arc(width / 2, height / 2, mapWidth, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.clip();
+    // ctx.strokeStyle = "white";
+    // ctx.beginPath();
+    // ctx.arc(width / 2, height / 2, mapWidth, 0, 2 * Math.PI);
+    // ctx.stroke();
+    // ctx.clip();
     // Grid lines.
     const shadeFactor = 50 - 77 * sinBeta;
     for (let y = -gridlineCount; y <= gridlineCount; y++) {
         const shade = Math.min(255, (gridlineCount - Math.abs(y)) / gridlineCount * shadeFactor);
         const color = `rgb(${shade}, ${shade}, ${shade})`;
         const startGridX = -extreme;
-        const startGridY = y * gridlineLength;
+        const startGridY = y * gridlineLength - latOffset;
         const endGridX = extreme;
-        const endGridY = y * gridlineLength;
+        const endGridY = y * gridlineLength - latOffset;
         line(startGridX, startGridY, endGridX, endGridY, color);
     }
     for (let x = -gridlineCount; x <= gridlineCount; x++) {
         const shade = Math.min(255, (gridlineCount - Math.abs(x)) / gridlineCount * shadeFactor);
         const color = `rgb(${shade}, ${shade}, ${shade})`;
-        const startGridX = x * gridlineLength;
+        const startGridX = x * gridlineLength - lngOffset;
         const startGridY = -extreme;
-        const endGridX = x * gridlineLength;
+        const endGridX = x * gridlineLength - lngOffset;
         const endGridY = extreme;
         line(startGridX, startGridY, endGridX, endGridY, color);
     }

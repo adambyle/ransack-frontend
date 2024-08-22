@@ -60,8 +60,6 @@ const elRefreshesDebug = <HTMLParagraphElement>document.getElementById("refreshe
 const elCoordsDebug = <HTMLParagraphElement>document.getElementById("coords-debug");
 const elOffsetDebug = <HTMLParagraphElement>document.getElementById("offset-debug");
 const elAngleDebug = <HTMLParagraphElement>document.getElementById("angle-debug");
-const elFrameTime = <HTMLParagraphElement>document.getElementById("elFrameTime");
-const elInBetweenTime = <HTMLParagraphElement>document.getElementById("inBetweenTime");
 
 let refreshes = 0;
 
@@ -93,7 +91,7 @@ function activateOrientation() {
             }
             if (ev.beta) {
                 elAngleDebug.innerText = `${ev.beta}`;
-                beta = Math.min(90, Math.max(0, ev.beta * 1.5)) - 90;
+                beta = Math.min(90, Math.max(0, ev.beta * 1)) - 90;
             }
         });
     }
@@ -117,7 +115,7 @@ let yDegreesPerMeter = 0;
 
 const metersPerGridline = 10;
 const gridlineLength = 1;
-const mapWidth = 175;
+const mapWidth = 200;
 const pxPerMeter = gridlineLength / metersPerGridline;
 
 let inBetweenTime = 0;
@@ -126,8 +124,6 @@ let xMetersPerDegree = 0;
 let yMetersPerDegree = 0;
 
 function draw() {
-    elInBetweenTime.innerText = `In between:${Date.now() - inBetweenTime}ms`;
-
     if (xMetersPerDegree == 0) {
         xMetersPerDegree = renderCoords.distanceTo(
             new Coords(renderCoords.lat, renderCoords.lng + 1));
@@ -141,8 +137,8 @@ function draw() {
     const dt = (Date.now() - loopInstance) / 1000;
     loopInstance = Date.now();
 
-    if (renderCoords.lat - myCoords.lat > xDegreesPerMeter * gridlineLength * 10
-        || renderCoords.lng - myCoords.lng > yDegreesPerMeter * gridlineLength * 10
+    if (renderCoords.lat - myCoords.lat > 10 * xDegreesPerMeter
+        || renderCoords.lng - myCoords.lng > 10 * yDegreesPerMeter
     ) {
         renderCoords = myCoords;
     } else {
@@ -154,12 +150,12 @@ function draw() {
 
     grid();
 
-    elFrameTime.innerText = `Frame time: ${Date.now() - drawStart}ms`;
-
     inBetweenTime = Date.now();
 
-    setTimeout(draw, 1000 / 20);
+    requestAnimationFrame(draw);
 }
+
+requestAnimationFrame(draw);
 
 let testStart = Date.now();
 
@@ -200,7 +196,9 @@ function grid() {
     // Useful values.
 
     const lngOffset = (renderCoords.lat % xDegreesPerMeter) / xDegreesPerMeter * pxPerMeter;
-    const latOffset = (renderCoords.lat % yDegreesPerMeter) / xDegreesPerMeter * pxPerMeter;
+    const latOffset = (renderCoords.lat % yDegreesPerMeter) / yDegreesPerMeter * pxPerMeter;
+
+    console.log((renderCoords.lat % xDegreesPerMeter) / xDegreesPerMeter);
 
     const alphaRad = alpha * Math.PI / 180;
     const betaRad = beta * Math.PI / 180;
@@ -210,7 +208,7 @@ function grid() {
     const cosBeta = Math.cos(betaRad);
     const sinBeta = Math.sin(betaRad);
 
-    const gridlineCount = 5;
+    const gridlineCount = 20;
 
     const extreme = gridlineCount * gridlineLength;
 
@@ -224,10 +222,6 @@ function grid() {
     ): [number, number, number] {
         let x = gridX;
         let y = gridY;
-
-        // Offset based on player position.
-        // x += lngOffset;
-        // y += latOffset;
 
         // Rotate.
         [x, y] = [
@@ -321,12 +315,12 @@ function grid() {
         ctx.stroke();
     }
 
-    ctx.strokeStyle = "white";
+    // ctx.strokeStyle = "white";
 
-    ctx.beginPath();
-    ctx.arc(width / 2, height / 2, mapWidth, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.clip();
+    // ctx.beginPath();
+    // ctx.arc(width / 2, height / 2, mapWidth, 0, 2 * Math.PI);
+    // ctx.stroke();
+    // ctx.clip();
 
     // Grid lines.
 
@@ -337,9 +331,9 @@ function grid() {
         const color = `rgb(${shade}, ${shade}, ${shade})`;
 
         const startGridX = -extreme;
-        const startGridY = y * gridlineLength;
+        const startGridY = y * gridlineLength - latOffset;
         const endGridX = extreme;
-        const endGridY = y * gridlineLength;
+        const endGridY = y * gridlineLength - latOffset;
 
         line(startGridX, startGridY, endGridX, endGridY, color );
     }
@@ -348,9 +342,9 @@ function grid() {
         const shade = Math.min(255, (gridlineCount - Math.abs(x)) / gridlineCount * shadeFactor);
         const color = `rgb(${shade}, ${shade}, ${shade})`;
 
-        const startGridX = x * gridlineLength;
+        const startGridX = x * gridlineLength - lngOffset;
         const startGridY = -extreme;
-        const endGridX = x * gridlineLength;
+        const endGridX = x * gridlineLength - lngOffset;
         const endGridY = extreme;
 
         line(startGridX, startGridY, endGridX, endGridY, color);
