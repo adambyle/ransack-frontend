@@ -45,7 +45,6 @@ if (!("geolocation" in navigator)) {
 }
 const elRefreshesDebug = document.getElementById("refreshes-debug");
 const elCoordsDebug = document.getElementById("coords-debug");
-const elAnythingDebug = document.getElementById("anything-debug");
 let refreshes = 0;
 navigator.geolocation.watchPosition(position => {
     refreshes++;
@@ -98,7 +97,6 @@ let xMetersPerDegree = 0;
 let yMetersPerDegree = 0;
 function draw() {
     const rect = elCanvas.getBoundingClientRect();
-    elAnythingDebug.innerText = `Anything: ${rect.top} ${rect.left} ${rect.width} ${rect.height}`;
     if (xMetersPerDegree == 0) {
         xMetersPerDegree = renderCoords.distanceTo(new Coords(renderCoords.lat, renderCoords.lng + 1));
         xDegreesPerMeter = 1 / xMetersPerDegree;
